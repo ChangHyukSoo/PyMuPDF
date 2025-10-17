@@ -3421,6 +3421,8 @@ PyObject* extractBLOCKS(mupdf::FzStextPage& self)
             {
                 line_n++;
                 fz_rect linerect = fz_empty_rect;
+                int prev_c = 0;         // 2025.10.16
+                float prev_x = 0.0f;    // 2025.10.16
                 for (fz_stext_char* ch = line->first_char; ch; ch = ch->next)
                 {
                     fz_rect cbbox = JM_char_bbox(line, ch);
@@ -3428,9 +3430,21 @@ PyObject* extractBLOCKS(mupdf::FzStextPage& self)
                     {
                         continue;
                     }
+
+                    // 2025.10.16: start
+                    if (prev_c > 0 && prev_c != 0x20 && last_char != 0x20)
+                    {
+                        float gap = ch->quad.ul.x - prev_x;
+                        if (gap > 0.5f)
+                        {
+                            JM_append_rune(res.m_internal, 0x20);
+                        }
+                    }   // 2025.10.16: end
                     JM_append_rune(res.m_internal, ch->c);
                     last_char = ch->c;
                     linerect = fz_union_rect(linerect, cbbox);
+                    prev_c = last_char;         // 2025.10.16
+                    prev_x = ch->quad.ur.x;     // 2025.10.16
                 }
                 if (last_char != 10 && !fz_is_empty_rect(linerect))
                 {
